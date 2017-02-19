@@ -15,10 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="example.c">
+    <ClCompile Include="greatest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="example-suite.c">
+    <ClCompile Include="greatest_example.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="greatest_example2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -97,8 +97,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="example-suite.c" />
-    <ClCompile Include="example.c" />
+    <ClCompile Include="greatest.c" />
+    <ClCompile Include="greatest_example.c" />
+    <ClCompile Include="greatest_example2.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="greatest.h" />
