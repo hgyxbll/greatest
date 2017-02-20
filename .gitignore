@@ -2,3 +2,8 @@ example
 example_no_suite
 example_no_runner
 *.o
+Debug
+x64
+.vs
+*.db
+*.opendb
