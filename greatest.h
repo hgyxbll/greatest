@@ -97,10 +97,21 @@ int main(int argc, char **argv) {
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include "greatest_config.h"
 
 /***********
  * Options *
  ***********/
+
+ /* use FILE. */
+#ifndef GREATEST_USE_FILE
+#define fprintf(file, ...) printf(__VA_ARGS__)
+#define fflush(file)
+#undef stdout
+#define stdout (int*)0
+#define FILE int
+#define GREATEST_STDOUT (int*)0
+#endif
 
 /* Default column width for non-verbose output. */
 #ifndef GREATEST_DEFAULT_WIDTH
@@ -257,6 +268,7 @@ struct greatest_report_t {
 /* Global var for the current testing context.
  * Initialized by GREATEST_MAIN_DEFS(). */
 extern greatest_run_info greatest_info;
+extern enum greatest_test_res greatest_last_test_result;
 
 /* Type for ASSERT_ENUM_EQ's ENUM_STR argument. */
 typedef const char *greatest_enum_str_fun(int value);
@@ -264,7 +276,6 @@ typedef const char *greatest_enum_str_fun(int value);
 /**********************
  * Exported functions *
  **********************/
-
 /* These are used internally by greatest. */
 void greatest_do_pass(const char *name);
 void greatest_do_fail(const char *name);
@@ -276,6 +287,11 @@ int greatest_do_assert_equal_t(const void *exp, const void *got,
     greatest_type_info *type_info, void *udata);
 
 /* These are part of the public greatest API. */
+void greatest_init();
+void greatest_parse_args(int argc, char **argv);
+int greatest_report();
+void greatest_run_suite(greatest_suite_cb *suite_cb, const char *suite_name);
+
 void GREATEST_SET_SETUP_CB(greatest_setup_cb *cb, void *udata);
 void GREATEST_SET_TEARDOWN_CB(greatest_teardown_cb *cb, void *udata);
 int greatest_all_passed(void);
@@ -285,7 +301,6 @@ void greatest_get_report(struct greatest_report_t *report);
 unsigned int greatest_get_verbosity(void);
 void greatest_set_verbosity(unsigned int verbosity);
 void greatest_set_flag(greatest_flag_t flag);
-
 
 /********************
 * Language Support *
@@ -303,24 +318,24 @@ void greatest_set_flag(greatest_flag_t flag);
  **********/
 
 /* Define a suite. */
-#define GREATEST_SUITE(NAME) void NAME(void); void NAME(void)
+#define GREATEST_SUITE(NAME) void suite_##NAME(void); void suite_##NAME(void)
 
 /* Declare a suite, provided by another compilation unit. */
 #define GREATEST_SUITE_EXTERN(NAME) void NAME(void)
 
 /* Start defining a test function.
  * The arguments are not included, to allow parametric testing. */
-#define GREATEST_TEST static enum greatest_test_res
+#define GREATEST_TEST(function_name) static void test_##function_name()
 
 /* PASS/FAIL/SKIP result from a test. Used internally. */
 typedef enum greatest_test_res {
-    GREATEST_TEST_RES_PASS = 0,
-    GREATEST_TEST_RES_FAIL = -1,
-    GREATEST_TEST_RES_SKIP = 1
+	GREATEST_TEST_RES_PASS = 0,
+	GREATEST_TEST_RES_FAIL = -1,
+	GREATEST_TEST_RES_SKIP = 1
 } greatest_test_res;
 
 /* Run a suite. */
-#define GREATEST_RUN_SUITE(S_NAME) greatest_run_suite(S_NAME, #S_NAME)
+#define GREATEST_RUN_SUITE(S_NAME) void suite_##S_NAME(void);greatest_run_suite(suite_##S_NAME, #S_NAME)
 
 /* Run a test in the current suite. */
 #define GREATEST_RUN_TEST(TEST)                                         \
@@ -328,9 +343,10 @@ typedef enum greatest_test_res {
         if (greatest_pre_test(#TEST) == 1) {                            \
             enum greatest_test_res res = GREATEST_SAVE_CONTEXT();       \
             if (res == GREATEST_TEST_RES_PASS) {                        \
-                res = TEST();                                           \
+				greatest_last_test_result = GREATEST_TEST_RES_PASS;		\
+                test_##TEST();                                           \
             }                                                           \
-            greatest_post_test(#TEST, res);                             \
+            greatest_post_test(#TEST, greatest_last_test_result);                             \
         } else if (GREATEST_LIST_ONLY()) {                              \
             fprintf(GREATEST_STDOUT, "  %s\n", #TEST);                  \
         }                                                               \
@@ -527,20 +543,30 @@ typedef enum greatest_test_res {
     } while (0)                                                         \
 
 /* Pass. */
-#define GREATEST_PASSm(MSG)                                             \
-    do {                                                                \
-        greatest_info.msg = MSG;                                        \
-        return GREATEST_TEST_RES_PASS;                                  \
-    } while (0)
+//#define GREATEST_PASSm(MSG)                                             \
+//    do {                                                                \
+//        greatest_info.msg = MSG;                                        \
+//    } while (0)
+#define GREATEST_PASSm(MSG)
 
 /* Fail. */
-#define GREATEST_FAILm(MSG)                                             \
-    do {                                                                \
-        greatest_info.fail_file = __FILE__;                             \
-        greatest_info.fail_line = __LINE__;                             \
-        greatest_info.msg = MSG;                                        \
-        return GREATEST_TEST_RES_FAIL;                                  \
-    } while (0)
+//#define GREATEST_FAILm(MSG)                                             \
+//    do {                                                                \
+//        greatest_info.fail_file = __FILE__;                             \
+//        greatest_info.fail_line = __LINE__;                             \
+//        greatest_info.msg = MSG;                                        \
+//        if(greatest_last_test_result == GREATEST_TEST_RES_PASS)			\
+//		{																\
+//			greatest_last_test_result = GREATEST_TEST_RES_FAIL			\
+//		}																\
+//    } while (0)
+#define GREATEST_FAILm(MSG)												\
+    greatest_last_test_result = GREATEST_TEST_RES_FAIL;			\
+    if (greatest_info.col != 0) {                                       \
+        fprintf(GREATEST_STDOUT, "\n");                                 \
+        greatest_info.col = 0;                                          \
+    }                                                                   \
+	fprintf(GREATEST_STDOUT,"%s:%u [%s] Assert Fail!\n",__FILE__,__LINE__,MSG?MSG:"")	
 
 /* Optional GREATEST_FAILm variant that longjmps. */
 #if GREATEST_USE_LONGJMP
@@ -557,9 +583,13 @@ typedef enum greatest_test_res {
 /* Skip the current test. */
 #define GREATEST_SKIPm(MSG)                                             \
     do {                                                                \
-        greatest_info.msg = MSG;                                        \
-        return GREATEST_TEST_RES_SKIP;                                  \
+        if(greatest_info.test_filter == NULL /* && greatest_info.test_filter == NULL */){ \
+            greatest_last_test_result = GREATEST_TEST_RES_SKIP;			\
+			greatest_info.msg = MSG;                                   \
+            return;                                                     \
+        }                                                               \
     } while (0)
+
 
 /* Check the result of a subfunction using ASSERT, etc. */
 #define GREATEST_CHECK_CALL(RES)                                        \

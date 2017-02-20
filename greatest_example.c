@@ -3,12 +3,26 @@
 
 #include "greatest.h"
 
-/* Declare a local suite. */
-SUITE(other_suite);
-
-TEST blah(void) {
-    PASS();
+TEST(strcpy) {
+	char sz[10];
+	strcpy(sz, "123");
+	ASSERT(strcmp(sz, "123") == 0);
 }
+
+TEST(strcat) {
+	char sz[10] ="";
+	strcat(sz, "123");
+	ASSERT(strcmp(sz, "123") == 0);
+}
+
+TEST(strcmp) {
+	char sz[10] = "";
+	strcat(sz, "123");
+	ASSERT(strcmp(sz, "126") == 0);
+	ASSERT(strcmp(sz, "124") == 0);
+	ASSERT(strcmp(sz, "123") == 0);
+}
+
 
 int teardown_was_called;
 static void trace_setup(void *arg) {
@@ -24,10 +38,14 @@ static void trace_teardown(void *arg) {
 }
 
 
-GREATEST_SUITE(other_suite) {
+SUITE(suite1) {
 	/* Add setup/teardown for each test case. */
-	GREATEST_SET_SETUP_CB(trace_setup, NULL);
-	GREATEST_SET_TEARDOWN_CB(trace_teardown, NULL);
+	SET_SETUP(trace_setup, NULL);
+	SET_TEARDOWN(trace_teardown, NULL);
 
-    RUN_TEST(blah);
+	//auto generated start
+    RUN_TEST(strcpy);
+	RUN_TEST(strcat);
+	RUN_TEST(strcmp);
+	//auto generated end
 }

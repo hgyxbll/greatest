@@ -24,9 +24,15 @@
     <ClCompile Include="greatest_example2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="greatest_main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="greatest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="greatest_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

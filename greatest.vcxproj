@@ -100,9 +100,11 @@
     <ClCompile Include="greatest.c" />
     <ClCompile Include="greatest_example.c" />
     <ClCompile Include="greatest_example2.c" />
+    <ClCompile Include="greatest_main.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="greatest.h" />
+    <ClInclude Include="greatest_config.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

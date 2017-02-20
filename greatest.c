@@ -3,9 +3,21 @@
 #include <assert.h>
 
 #include "greatest.h"
-                                
-/* Define a suite, compiled seperately. */
-SUITE_EXTERN(other_suite);
+
+#define GREEN_COLOR "\033[32m"
+#define RED_COLOR "\033[31m"
+#define YELLOW_COLOR "\033[33m"
+#define RESET_COLOR "\033[m"
+
+#ifdef GREATEST_OUTPUT_WITH_NO_COLOR
+#define FAIL_STR "FAIL"
+#define PASS_STR "PASS"
+#define SKIP_STR "SKIP"
+#else
+#define FAIL_STR RED_COLOR "FAIL" RESET_COLOR
+#define PASS_STR GREEN_COLOR "PASS" RESET_COLOR
+#define SKIP_STR YELLOW_COLOR "SKIP" RESET_COLOR
+#endif
 
 /* Is FILTER a subset of NAME? */                                       
 static int greatest_name_match(const char *name,                        
@@ -49,17 +61,24 @@ void greatest_post_test(const char *name, int res) {
     if (res <= GREATEST_TEST_RES_FAIL) {                                
         greatest_do_fail(name);                                         
     } else if (res >= GREATEST_TEST_RES_SKIP) {                         
-        greatest_do_skip(name);                                         
+        greatest_do_skip(name);
+		if (!GREATEST_IS_VERBOSE())
+		{
+			greatest_info.col++;
+		}
     } else if (res == GREATEST_TEST_RES_PASS) {                         
-        greatest_do_pass(name);                                         
+        greatest_do_pass(name);
+		if (!GREATEST_IS_VERBOSE())
+		{
+			greatest_info.col++;
+		}
     }                                                                   
     greatest_info.suite.tests_run++;                                    
-    greatest_info.col++;                                                
     if (GREATEST_IS_VERBOSE()) {                                        
         GREATEST_CLOCK_DIFF(greatest_info.suite.pre_test,               
             greatest_info.suite.post_test);                             
         fprintf(GREATEST_STDOUT, "\n");                                 
-    } else if (greatest_info.col % greatest_info.width == 0) {          
+    } else if (greatest_info.col!=0 && greatest_info.col % greatest_info.width == 0) {
         fprintf(GREATEST_STDOUT, "\n");                                 
         greatest_info.col = 0;                                          
     }                                                                   
@@ -67,9 +86,14 @@ void greatest_post_test(const char *name, int res) {
 }                                                                       
                                                                         
 static void report_suite(void) {                                        
-    if (greatest_info.suite.tests_run > 0) {                            
+    if (greatest_info.suite.tests_run > 0) {  
+        /* add linebreak if in line of '.'s */                          
+        if (greatest_info.col != 0) {                                   
+            fprintf(GREATEST_STDOUT, "\n");                             
+            greatest_info.col = 0;                                      
+        }   
         fprintf(GREATEST_STDOUT,                                        
-            "\n%u test%s - %u passed, %u failed, %u skipped",           
+            "= %u test%s - %u passed, %u failed, %u skipped",           
             greatest_info.suite.tests_run,                              
             greatest_info.suite.tests_run == 1 ? "" : "s",              
             greatest_info.suite.passed,                                 
@@ -94,7 +118,7 @@ static void update_counts_and_reset_suite(void) {
     greatest_info.col = 0;                                              
 }                                                                       
                                                                         
-static void greatest_run_suite(greatest_suite_cb *suite_cb,             
+void greatest_run_suite(greatest_suite_cb *suite_cb,             
                                const char *suite_name) {                
     if (greatest_info.suite_filter &&                                   
         !greatest_name_match(suite_name, greatest_info.suite_filter)) { 
@@ -111,7 +135,7 @@ static void greatest_run_suite(greatest_suite_cb *suite_cb,
                                                                         
 void greatest_do_pass(const char *name) {                               
     if (GREATEST_IS_VERBOSE()) {                                        
-        fprintf(GREATEST_STDOUT, "PASS %s: %s",                         
+        fprintf(GREATEST_STDOUT, PASS_STR " %s: %s",                         
             name, greatest_info.msg ? greatest_info.msg : "");          
     } else {                                                            
         fprintf(GREATEST_STDOUT, ".");                                  
@@ -121,29 +145,34 @@ void greatest_do_pass(const char *name) {
                                                                         
 void greatest_do_fail(const char *name) {                               
     if (GREATEST_IS_VERBOSE()) {                                        
+//	        fprintf(GREATEST_STDOUT,                                        
+//	            "FAIL %s: %s (%s:%u)",                                      
+//	            name, greatest_info.msg ? greatest_info.msg : "",           
+//	            greatest_info.fail_file, greatest_info.fail_line);      
         fprintf(GREATEST_STDOUT,                                        
-            "FAIL %s: %s (%s:%u)",                                      
-            name, greatest_info.msg ? greatest_info.msg : "",           
-            greatest_info.fail_file, greatest_info.fail_line);          
+            FAIL_STR " %s: %s",                                      
+            name, greatest_info.msg ? greatest_info.msg : "");   
     } else {                                                            
-        fprintf(GREATEST_STDOUT, "F");                                  
-        greatest_info.col++;                                            
+        //fprintf(GREATEST_STDOUT, "F");                                  
+        //greatest_info.col++;                                            
         /* add linebreak if in line of '.'s */                          
         if (greatest_info.col != 0) {                                   
             fprintf(GREATEST_STDOUT, "\n");                             
             greatest_info.col = 0;                                      
         }                                                               
-        fprintf(GREATEST_STDOUT, "FAIL %s: %s (%s:%u)\n",               
-            name,                                                       
-            greatest_info.msg ? greatest_info.msg : "",                 
-            greatest_info.fail_file, greatest_info.fail_line);          
+//	        fprintf(GREATEST_STDOUT, "FAIL %s: %s (%s:%u)\n",               
+//	            name,                                                       
+//	            greatest_info.msg ? greatest_info.msg : "",                 
+//	            greatest_info.fail_file, greatest_info.fail_line);          
+        fprintf(GREATEST_STDOUT, FAIL_STR " %s\n",               
+            name);      
     }                                                                   
     greatest_info.suite.failed++;                                       
 }                                                                       
                                                                         
 void greatest_do_skip(const char *name) {                               
     if (GREATEST_IS_VERBOSE()) {                                        
-        fprintf(GREATEST_STDOUT, "SKIP %s: %s",                         
+        fprintf(GREATEST_STDOUT, SKIP_STR " %s: %s",                         
             name,                                                       
             greatest_info.msg ?                                         
             greatest_info.msg : "" );                                   
@@ -189,7 +218,7 @@ void greatest_usage(const char *name) {
         name);                                                          
 }                                                                       
                                                                         
-static void greatest_parse_args(int argc, char **argv) {                
+void greatest_parse_args(int argc, char **argv) {                
     int i = 0;                                                          
     for (i = 1; i < argc; i++) {                                        
         if (0 == strncmp("-t", argv[i], 2)) {                           
@@ -296,7 +325,8 @@ static int greatest_memory_equal_cb(const void *exp, const void *got,
 static int greatest_memory_printf_cb(const void *t, void *udata) {      
     greatest_memory_cmp_env *env = (greatest_memory_cmp_env *)udata;    
     unsigned char *buf = (unsigned char *)t, diff_mark = ' ';           
-    FILE *out = GREATEST_STDOUT;                                        
+    FILE *out = GREATEST_STDOUT;           
+    (void)out;
     size_t i, line_i, line_len = 0;                                     
     int len = 0;   /* format hexdump with differences highlighted */    
     for (i = 0; i < env->size; i+= line_len) {                          
@@ -328,14 +358,10 @@ greatest_type_info greatest_type_info_memory = {
     greatest_memory_equal_cb,                                           
     greatest_memory_printf_cb,                                          
 };                                                                      
-greatest_run_info greatest_info;
 
-void greatest_main_init()
+void greatest_init()
 {
-
-}
-int main(int argc, char **argv) {
-    /* initialization. */
+	/* initialization. */
 	/* Suppress unused function warning if features aren't used */
 	(void)greatest_run_suite;
 	(void)greatest_parse_args;
@@ -343,13 +369,9 @@ int main(int argc, char **argv) {
 	memset(&greatest_info, 0, sizeof(greatest_info));
 	greatest_info.width = GREATEST_DEFAULT_WIDTH;
 	GREATEST_SET_TIME(greatest_info.begin);
-
-	/* Handle command-line arguments, etc. */
-    greatest_parse_args(argc, argv);                                
-
-    RUN_SUITE(other_suite);
-
-
+}
+int greatest_report()
+{
 	/* Report passes, failures, skipped tests, the number of
 	* assertions, and the overall run time. */
 	if (!GREATEST_LIST_ONLY()) {
@@ -371,5 +393,7 @@ int main(int argc, char **argv) {
 	}
 
 	return (greatest_all_passed() ? EXIT_SUCCESS : EXIT_FAILURE);
-
 }
+
+greatest_run_info greatest_info;
+enum greatest_test_res greatest_last_test_result;
