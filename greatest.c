@@ -7,7 +7,7 @@
 #define GREEN_COLOR "\033[32m"
 #define RED_COLOR "\033[31m"
 #define YELLOW_COLOR "\033[33m"
-#define RESET_COLOR "\033[m"
+#define RESET_COLOR "\033[0m"
 
 #ifdef GREATEST_OUTPUT_WITH_NO_COLOR
 #define FAIL_STR "FAIL"

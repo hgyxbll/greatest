@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 //#define GREATEST_USE_FILE
-#define GREATEST_OUTPUT_WITH_NO_COLOR
+//#define GREATEST_OUTPUT_WITH_NO_COLOR
 
 
 #ifdef __cplusplus
